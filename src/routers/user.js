@@ -106,7 +106,7 @@ const upload = multer({
     fileFilter(req, file, cb) { 
         // red
         if (!file.originalname.match(/\.(jpg|png|jpeg)$/)) { 
-            cb(new Error('User avatar must be a valid photo.'))
+            return cb(new Error('User avatar must be a valid photo.'))
         }
         // green
         cb(undefined, true);
@@ -114,14 +114,21 @@ const upload = multer({
 })
 
 router.post('/users/me/avatar', auth, upload.single('avatar'), async (req, res) => { 
-    const buffer = await sharp(req.file.buffer).resize({
-        width: 250,
-        height: 250
-    }).png().toBuffer();
-
-    req.user.avatar = buffer;
-    await req.user.save();
-    res.send();
+    try {
+        if (!req.file) { 
+            throw new Error('You must provide a image')
+        }
+        const buffer = await sharp(req.file.buffer).resize({
+            width: 250,
+            height: 250
+        }).png().toBuffer();
+    
+        req.user.avatar = buffer;
+        await req.user.save();
+        res.send();
+    } catch (e) {
+        res.status(400).send({ error: e.message });
+    }
 }, (error, req, res, next) => { 
     res.status(400).send({ error: error.message })
 })
